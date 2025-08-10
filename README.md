@@ -1,4 +1,4 @@
- Code Compiler
+Code Compiler
 
 An end-to-end web application that lets you write, compile, and execute code directly in the browser.
 

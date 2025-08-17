@@ -1,40 +1,43 @@
-// executePy.js
-const { exec } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-// Define the directory for outputs
+// Ensure the outputs directory exists (though Python doesn't typically create executables here)
 const outputPath = path.join(__dirname, 'outputs');
 if (!fs.existsSync(outputPath)) {
     fs.mkdirSync(outputPath, { recursive: true });
 }
 
 /**
- * Executes a Python script and returns its stdout or stderr.
- * @param {string} filepath The path to the Python file.
- * @returns {Promise<string>} A promise that resolves with stdout or rejects with stderr/error.
+ * Executes a Python file, redirecting input from a specified file.
+ * @param {string} filepath The absolute path to the Python source file.
+ * @param {string} inputFilePath The absolute path to the input data file.
+ * @returns {Promise<string>} A promise that resolves with the stdout of the executed program,
+ * or rejects with an error object containing details (error and stderr).
  */
-const executePy = (filepath) => {
+const executePy = (filepath, inputFilePath) => {
     return new Promise((resolve, reject) => {
-        // *** CHANGE MADE HERE: Using 'python' instead of 'python3' for Windows compatibility ***
-        exec(
-            `python ${filepath}`, // Changed from `python3` to `python`
-            (error, stdout, stderr) => {
-                // If there's an execution error (e.g., syntax error, runtime error)
-                if (error) {
-                    return reject({ error, stderr });
-                }
-                // If there's stderr output but no 'error' object (e.g., warnings)
-                if (stderr) {
-                    return reject(stderr);
-                }
-                // Resolve with the standard output if execution is successful
-                resolve(stdout);
+        // Command to execute the Python program and pipe the input file
+        // `python "${filepath}" < "${inputFilePath}"`: Runs the Python script
+        //                                            and redirects inputFilePath content to its stdin.
+        //                                            Quotes around paths handle potential spaces.
+        const command = `python "${filepath}" < "${inputFilePath}"`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                // If there's an error (e.g., syntax error, runtime error), reject with details
+                console.error(`Python execution error: ${error.message}`); // Log for debugging
+                return reject({ error: error.message, stderr: stderr });
             }
-        );
+            if (stderr) {
+                // If there's content in stderr (warnings, or some runtime errors), reject with it
+                console.error(`Python stderr output: ${stderr}`); // Log for debugging
+                return reject(stderr);
+            }
+            // If successful, resolve with the stdout
+            resolve(stdout);
+        });
     });
 };
 
-module.exports = {
-    executePy,
-};
+module.exports = { executePy };

@@ -1,153 +1,127 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Editor from 'react-simple-code-editor';
+import ReactMarkdown from 'react-markdown';
 import { highlight, languages } from 'prismjs/components/prism-core';
 import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-javascript'; // For general JS concepts
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-javascript';
 import 'prismjs/themes/prism.css';
 import axios from 'axios';
-import './App.css'; // Assuming this has your body background image
+import './App.css';
 
 function App() {
-  // Map language values to their corresponding Prism.js highlighter and default code
-  const languageMap = {
-    cpp: {
-      highlighter: languages.cpp,
-      defaultCode: `#include <iostream>\n\nint main() {\n  std::cout << "Hello, World!" << std::endl;\n  return 0;\n}`
-    },
-    c: {
-      highlighter: languages.c,
-      defaultCode: `#include <stdio.h>\n\nint main() {\n  printf("Hello, World!\\n");\n  return 0;\n}`
-    },
-    py: {
-      highlighter: languages.python,
-      defaultCode: `print("Hello, World!")`
-    },
-    java: {
-      highlighter: languages.java,
-      defaultCode: `public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}`
-    },
-  };
+  const [code, setCode] = useState(`#include <iostream>
+using namespace std;
 
-  const [code, setCode] = useState(languageMap.cpp.defaultCode);
-  const [lang, setLang] = useState('cpp'); // Initialize language state to 'cpp'
+int main() {
+    int num1, num2, sum;
+    cin >> num1 >> num2;
+    sum = num1 + num2;
+    cout << "The sum of the two numbers is: " << sum;
+    return 0;
+}`);
+  const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
-  const [isRunning, setIsRunning] = useState(false); // State for run button loading
+  const [aiReview, setAiReview] = useState('');
 
-  // Effect to update code when language changes
-  useEffect(() => {
-    setCode(languageMap[lang].defaultCode);
-  }, [lang]);
+  const handleRun = async () => {
+    const payload = {
+      language: 'cpp',
+      code,
+      input
+    };
 
-  const handleLangChange = (event) => {
-    setLang(event.target.value);
-  };
-
-  const handleSubmit = async () => {
-    setIsRunning(true);
-    setOutput(''); // Clear previous output
     try {
-      const payload = {
-        language: lang,
-        code: code
-      };
-      // Use VITE_BACKEND_URL from environment variables for flexible deployment
-      const { data } = await axios.post(import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000/run', payload);
+      const { data } = await axios.post(import.meta.env.VITE_BACKEND_URL, payload);
       setOutput(data.output);
     } catch (error) {
-      if (error.response) {
-        // Server responded with a status code outside of 2xx range
-        setOutput(`Error: ${error.response.status}\n${error.response.data.error || JSON.stringify(error.response.data)}`);
-      } else if (error.request) {
-        // Request was made but no response was received
-        setOutput("Error: No response from server. Please ensure the backend server is running and accessible at " + (import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000/run'));
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        setOutput("Error: " + error.message);
-      }
-      console.error("Submission error:", error);
-    } finally {
-      setIsRunning(false);
+      setOutput('Error executing code, error: ' + error.message);
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-900 text-white">
-      <h1 className="text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-        AlgoU Online Code Compiler
-      </h1>
+  const handleAiReview = async () => {
+    const payload = {
+      code
+    };
 
-      <div className="w-full max-w-4xl bg-gray-800 rounded-lg shadow-xl flex flex-col md:flex-row overflow-hidden">
+    try {
+      const { data } = await axios.post(import.meta.env.VITE_GOOGLE_GEMINI_API_URL, payload);
+      setAiReview(data.review);
+    } catch (error) {
+      setAiReview('Error in AI review, error: ' + error.message);
+    };
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-4xl font-extrabold text-gray-800 mb-6 text-center">AlgoU Online Code Compiler</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Code Editor Section */}
-        <div className="w-full md:w-2/3 p-6 flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <select
-              value={lang}
-              onChange={handleLangChange}
-              className="px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="cpp">C++</option>
-              <option value="c">C</option>
-              <option value="py">Python</option>
-              <option value="java">Java</option>
-            </select>
-            <button
-              onClick={handleSubmit}
-              className={`px-6 py-2 rounded-lg font-semibold transition-colors duration-300
-                ${isRunning ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400'}
-              `}
-              disabled={isRunning}
-            >
-              {isRunning ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Running...
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5 mr-2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z" />
-                  </svg>
-                  Run
-                </span>
-              )}
-            </button>
-          </div>
-          <div className="flex-1 rounded-lg overflow-hidden border border-gray-700 bg-gray-900">
+        <div className="bg-white shadow-lg rounded-lg p-4 h-full flex flex-col">
+          <h2 className="text-xl font-semibold text-gray-700 mb-3">Code Editor</h2>
+          <div className="bg-gray-100 rounded-lg overflow-y-auto flex-grow" style={{ height: '500px' }}>
             <Editor
               value={code}
               onValueChange={code => setCode(code)}
-              highlight={code => languageMap[lang].highlighter ? highlight(code, languageMap[lang].highlighter) : highlight(code, languages.clike)}
+              highlight={code => highlight(code, languages.js)}
               padding={15}
-              className="editor"
               style={{
                 fontFamily: '"Fira code", "Fira Mono", monospace',
                 fontSize: 14,
-                lineHeight: 1.5,
-                backgroundColor: '#1e1e1e', // Darker background for code area
-                color: '#d4d4d4', // Lighter text color
-                minHeight: '400px', // Ensure a decent height
-                overflowY: 'auto',
+                minHeight: '500px'
               }}
             />
           </div>
         </div>
 
-        {/* Output Section */}
-        <div className="w-full md:w-1/3 p-6 flex flex-col bg-gray-700">
-          <h2 className="text-2xl font-bold mb-4">Output</h2>
-          <div
-            className="flex-1 bg-gray-900 p-4 rounded-lg overflow-auto border border-gray-600 whitespace-pre-wrap"
-            style={{ fontFamily: '"Fira code", "Fira Mono", monospace', fontSize: 14 }}
-          >
-            {output}
+        {/* Input, Output, AI Review */}
+        <div className="flex flex-col gap-4">
+          {/* Input Box */}
+          <div className="bg-white shadow-lg rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">Input</h2>
+            <textarea
+              rows="4"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Enter input values..."
+              className="w-full p-3 text-sm border border-gray-300 rounded-md resize-none"
+            />
+          </div>
+
+          {/* Output Box */}
+          <div className="bg-white shadow-lg rounded-lg p-4 overflow-y-auto" style={{ height: '150px' }}>
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">Output</h2>
+            <div className="text-sm font-mono whitespace-pre-wrap text-gray-800">{output}</div>
+          </div>
+
+          {/* AI Review Box */}
+          <div className="bg-white shadow-lg rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">AI Review</h2>
+            <div className="prose prose-sm text-gray-800 overflow-y-auto" style={{ height: '150px' }}>
+              {
+                aiReview === '' ?
+                  <div>🤖</div> :
+                  <ReactMarkdown>
+                    {aiReview}
+                  </ReactMarkdown>
+              }
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-4 mt-2">
+            <button
+              onClick={handleRun}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
+            >
+              Run
+            </button>
+            <button
+              onClick={handleAiReview}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition"
+            >
+              AI Review
+            </button>
           </div>
         </div>
       </div>

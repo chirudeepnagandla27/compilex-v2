@@ -4,6 +4,7 @@ const { generateFile } = require("./generateFile");
 const { executeCpp } = require("./executeCpp");
 const { executePy } = require("./executePy");
 const { executeJava } = require("./executeJava"); // Import the Java executor
+const { generateInputFile } = require("./generateInputFile");
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.get("/", (req, res) => {
 app.post("/run", async (req, res) => {
     console.log("📩 POST /run endpoint triggered");
 
-    const { language = 'cpp', code } = req.body;
+    const { language = 'cpp', code, input } = req.body;
     console.log(`📦 Received request for language: ${language}, code length: ${code ? code.length : 0}`);
 
     if (!code) {
@@ -35,22 +36,23 @@ app.post("/run", async (req, res) => {
     try {
         console.log("📝 Generating file...");
         const filePath = await generateFile(language, code);
+        const inputFilePath = await generateInputFile(input);
         console.log("📁 File generated at:", filePath);
 
         let output;
 
         if (language === "cpp") {
             console.log("🚀 Executing C++ code...");
-            output = await executeCpp(filePath);
+            output = await executeCpp(filePath,inputFilePath);
         } else if (language === "c") {
             console.log("🚀 Executing C code (using g++ for compatibility)...");
-            output = await executeCpp(filePath);
+            output = await executeCpp(filePath,inputFilePath);
         } else if (language === "py") {
             console.log("🚀 Executing Python code...");
-            output = await executePy(filePath);
+            output = await executePy(filePath,inputFilePath);
         } else if (language === "java") {
             console.log("🚀 Executing Java code...");
-            output = await executeJava(filePath);
+            output = await executeJava(filePath,inputFilePath);
         } else {
             console.log(`❌ Error: Unsupported language: ${language}`);
             return res.status(400).json({ success: false, error: "Unsupported language" });

@@ -26,7 +26,7 @@ const executeJava = (filepath, inputFilePath) => {
         // `javac -d "${outputPath}" "${filepath}"`: Compiles Java source and places .class in outputPath.
         const compileCommand = `javac -d "${outputPath}" "${filepath}"`;
 
-        exec(compileCommand, (compileError, compileStdout, compileStderr) => {
+        exec(compileCommand, { shell: '/bin/bash' }, (compileError, compileStdout, compileStderr) => {
             if (compileError) {
                 console.error(`Java compilation error: ${compileError.message}`);
                 return reject({ error: compileError.message, stderr: compileStderr });
@@ -37,14 +37,10 @@ const executeJava = (filepath, inputFilePath) => {
                 return reject(compileStderr);
             }
 
-            // 2. Execute the compiled Java class with input redirection
-            // `java -cp "${outputPath}" "${className}" < "${inputFilePath}"`:
-            //   -cp "${outputPath}": Sets the classpath to where the .class file is located.
-            //   "${className}": The name of the main class to execute.
-            //   < "${inputFilePath}": Redirects content of inputFilePath to standard input.
-            const runCommand = `java -cp "${outputPath}" "${className}" < "${inputFilePath}"`;
+            // 2. Execute the compiled Java class with input redirection and timeout
+            const runCommand = `timeout 3s java -cp "${outputPath}" "${className}" < "${inputFilePath}"`;
 
-            exec(runCommand, (runError, runStdout, runStderr) => {
+            exec(runCommand, { shell: '/bin/bash' }, (runError, runStdout, runStderr) => {
                 if (runError) {
                     console.error(`Java runtime error: ${runError.message}`);
                     return reject({ error: runError.message, stderr: runStderr });

@@ -22,21 +22,26 @@ const executeCpp = (filepath, inputFilePath) => {
     const outPath = path.join(outputPath, `${jobID}.exe`); // Using .exe for Windows, adjust for Linux/macOS if needed (no extension)
 
     return new Promise((resolve, reject) => {
-        // Add compile warnings and standard, and use linux timeout to prevent infinite loops
-        const compile = `g++ -std=c++17 -O2 -pipe "${filepath}" -o "${outPath}"`;
-        // Run with a 3s timeout; adjust as needed. Use input redirection.
-        const run = `timeout 3s "${outPath}" < "${inputFilePath}"`;
-        const command = `${compile} && ${run}`;
+        // Command to compile and then execute the C++ program
+        // `g++ ${filepath} -o ${outPath}`: Compiles the C++ source file into an executable.
+        // `&&`: Ensures the execution command runs only if compilation is successful.
+        // `${outPath} < "${inputFilePath}"`: Executes the compiled program and redirects
+        //                                     the content of inputFilePath as its standard input.
+        //                                     Quotes around paths handle potential spaces.
+        const command = `g++ "${filepath}" -o "${outPath}" && "${outPath}" < "${inputFilePath}"`;
 
-        exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+        exec(command, (error, stdout, stderr) => {
             if (error) {
+                // If there's an error (e.g., compilation error, runtime error), reject with details
                 console.error(`Execution error: ${error.message}`); // Log for debugging
                 return reject({ error: error.message, stderr: stderr });
             }
             if (stderr) {
+                // If there's content in stderr (warnings, or some runtime errors), reject with it
                 console.error(`Stderr output: ${stderr}`); // Log for debugging
                 return reject(stderr);
             }
+            // If successful, resolve with the stdout
             resolve(stdout);
         });
     });

@@ -1,5 +1,5 @@
-/* Tailwind base is already imported via index.css in Vite setup if present. Add any local tweaks here. */
-.editor-container {
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
+body {
+    background-image: url('https://images.pexels.com/photos/1831234/pexels-photo-1831234.jpeg');
+    background-size: cover;
+    background-position: center;
+  }

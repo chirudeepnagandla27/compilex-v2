@@ -17,10 +17,13 @@ if (!fs.existsSync(outputPath)) {
  */
 const executePy = (filepath, inputFilePath) => {
     return new Promise((resolve, reject) => {
-        // Prefer python3 if available. Use timeout to prevent infinite loops.
-        const command = `command -v python3 >/dev/null 2>&1 && PY=python3 || PY=python; timeout 3s "$PY" "${filepath}" < "${inputFilePath}"`;
+        // Command to execute the Python program and pipe the input file
+        // `python "${filepath}" < "${inputFilePath}"`: Runs the Python script
+        //                                            and redirects inputFilePath content to its stdin.
+        //                                            Quotes around paths handle potential spaces.
+        const command = `python "${filepath}" < "${inputFilePath}"`;
 
-        exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+        exec(command, (error, stdout, stderr) => {
             if (error) {
                 // If there's an error (e.g., syntax error, runtime error), reject with details
                 console.error(`Python execution error: ${error.message}`); // Log for debugging
